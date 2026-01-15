@@ -62,11 +62,14 @@ WORKDIR /app
 # Copy requirements first for caching
 COPY requirements.txt .
 
-# Install PyTorch with CUDA 12.1
-RUN pip install torch==2.5.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# Install PyTorch with CUDA 12.1 - pin all versions to prevent conflicts
+RUN pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
-# Install other dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install other dependencies (with constraint to prevent torch upgrade)
+RUN echo "torch==2.5.1" > /tmp/constraints.txt && \
+    echo "torchvision==0.20.1" >> /tmp/constraints.txt && \
+    echo "torchaudio==2.5.1" >> /tmp/constraints.txt && \
+    pip install --no-cache-dir -c /tmp/constraints.txt -r requirements.txt
 
 # Copy Flash Attention from builder stage
 COPY --from=flash-attn-builder /usr/local/lib/python3.11/dist-packages/flash_attn* /usr/local/lib/python3.11/dist-packages/
