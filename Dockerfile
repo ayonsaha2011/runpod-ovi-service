@@ -1,7 +1,7 @@
 # =============================================================================
-# Ovi 1.1 RunPod Serverless - Production Dockerfile
+# Ovi 1.1 RunPod Serverless - Production Dockerfile (OPTIMIZED)
 # =============================================================================
-# Multi-stage build for optimized image size
+# Lightweight image - models downloaded at runtime to network volume
 # Target: RunPod Serverless with A100/H100 GPUs
 # =============================================================================
 
@@ -43,7 +43,6 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 FROM base AS flash-attn-builder
 
 # Install build dependencies
-# Cache bust: 2026-01-15
 RUN pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
 # Build Flash Attention 2 from source
@@ -75,58 +74,31 @@ RUN echo "torch==2.5.1" > /tmp/constraints.txt && \
 COPY --from=flash-attn-builder /usr/local/lib/python3.11/dist-packages/flash_attn* /usr/local/lib/python3.11/dist-packages/
 
 # -----------------------------------------------------------------------------
-# Stage 4: Clone Ovi repository
-# -----------------------------------------------------------------------------
-FROM python-deps AS ovi-clone
-
-WORKDIR /app
-
-# Clone Ovi repository
-RUN git clone --depth 1 https://github.com/character-ai/Ovi.git /app/Ovi
-
-# -----------------------------------------------------------------------------
-# Stage 5: Download models
-# -----------------------------------------------------------------------------
-FROM ovi-clone AS model-download
-
-WORKDIR /app
-
-# Copy download script
-COPY scripts/download_models.py /app/scripts/download_models.py
-
-# Download all model weights (this will be LARGE ~30GB+)
-# Uses HF_TOKEN from environment if available (for gated models)
-# Build with: DOCKER_BUILDKIT=1 docker build --secret id=hf_token,env=HF_TOKEN -t image .
-RUN --mount=type=secret,id=hf_token,env=HF_TOKEN \
-    python3 /app/scripts/download_models.py \
-    --output-dir /models \
-    --models 720x720_5s 960x960_5s 960x960_10s
-
-# -----------------------------------------------------------------------------
-# Stage 6: Production image
+# Stage 4: Production image (NO MODEL DOWNLOAD - uses network volume)
 # -----------------------------------------------------------------------------
 FROM python-deps AS production
 
 LABEL maintainer="AI Platform"
-LABEL version="1.0.0"
-LABEL description="Ovi 1.1 Video Generation - RunPod Serverless"
+LABEL version="1.1.0"
+LABEL description="Ovi 1.1 Video Generation - RunPod Serverless (Lightweight)"
 
 WORKDIR /app
 
-# Copy Ovi source code
-COPY --from=ovi-clone /app/Ovi /app/Ovi
+# Clone Ovi repository directly in production stage
+RUN git clone --depth 1 https://github.com/character-ai/Ovi.git /app/Ovi
 
-# Copy downloaded models
-COPY --from=model-download /models /models
-
-# Copy service code
+# Copy service code and scripts
 COPY src/ /app/src/
 COPY configs/ /app/configs/
+COPY scripts/ /app/scripts/
 
 # Set Python path to include Ovi
 ENV PYTHONPATH="/app/src:/app/Ovi:${PYTHONPATH}"
 ENV OVI_PATH="/app/Ovi"
-ENV OVI_CKPT_DIR="/models"
+
+# Models are stored on RunPod Network Volume (mounted at /runpod-volume)
+# On first cold start, models will be downloaded automatically
+ENV OVI_CKPT_DIR="/runpod-volume/models"
 ENV OVI_MODEL_NAME="960x960_10s"
 
 # RunPod specific environment

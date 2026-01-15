@@ -44,20 +44,27 @@ from r2_storage import get_storage_handler, R2StorageHandler
 
 # Load model at worker startup
 DEFAULT_MODEL = os.environ.get("OVI_MODEL_NAME", "960x960_10s")
-CKPT_DIR = os.environ.get("OVI_CKPT_DIR", "/models")
+CKPT_DIR = os.environ.get("OVI_CKPT_DIR", "/runpod-volume/models")
 
 logger.info(f"Initializing Ovi engine with model={DEFAULT_MODEL}, ckpt_dir={CKPT_DIR}")
 
+# Download models if not present (first cold start on new network volume)
 try:
-    # Initialize engine (lazy loading - will load model on first request)
-    engine = get_engine(
-        model_name=DEFAULT_MODEL,
-        ckpt_dir=CKPT_DIR,
-        cpu_offload=os.environ.get("OVI_CPU_OFFLOAD", "false").lower() == "true",
-        fp8=os.environ.get("OVI_FP8", "false").lower() == "true",
-        qint8=os.environ.get("OVI_QINT8", "false").lower() == "true"
-    )
-    logger.info("Ovi engine wrapper initialized successfully")
+    from download_on_startup import ensure_models_ready
+    
+    if not ensure_models_ready(CKPT_DIR, DEFAULT_MODEL):
+        logger.error("Failed to download models - engine will not be initialized")
+        engine = None
+    else:
+        # Initialize engine (lazy loading - will load model on first request)
+        engine = get_engine(
+            model_name=DEFAULT_MODEL,
+            ckpt_dir=CKPT_DIR,
+            cpu_offload=os.environ.get("OVI_CPU_OFFLOAD", "false").lower() == "true",
+            fp8=os.environ.get("OVI_FP8", "false").lower() == "true",
+            qint8=os.environ.get("OVI_QINT8", "false").lower() == "true"
+        )
+        logger.info("Ovi engine wrapper initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize Ovi engine: {e}")
     engine = None
