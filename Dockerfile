@@ -43,7 +43,8 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 FROM base AS flash-attn-builder
 
 # Install build dependencies
-RUN pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu121
+# Cache bust: 2026-01-15
+RUN pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
 
 # Build Flash Attention 2 from source
 ENV TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0"
@@ -62,7 +63,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install PyTorch with CUDA 12.1
-RUN pip install torch==2.6.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+RUN pip install torch==2.5.1 torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
 # Install other dependencies
 RUN pip install --no-cache-dir -r requirements.txt
