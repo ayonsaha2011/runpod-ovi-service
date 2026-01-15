@@ -1,0 +1,73 @@
+# =============================================================================
+# Ovi 1.1 RunPod Serverless - Python Dependencies
+# =============================================================================
+
+# RunPod SDK
+runpod>=1.7.6
+
+# Pydantic for API models
+pydantic>=2.0.0
+
+# AWS SDK for Cloudflare R2 (S3-compatible)
+boto3>=1.34.0
+botocore>=1.34.0
+
+# =============================================================================
+# Ovi Dependencies (from requirements.txt)
+# =============================================================================
+
+# Computer Vision
+opencv-python>=4.9.0.80
+
+# Deep Learning / Diffusers
+diffusers>=0.31.0
+transformers>=4.49.0,<=4.51.3
+tokenizers>=0.20.3
+accelerate>=1.1.1
+
+# Utilities
+tqdm
+imageio[ffmpeg]
+easydict
+ftfy
+dashscope
+imageio-ffmpeg
+
+# Numerical
+numpy>=1.23.5,<2
+scipy
+
+# Video/Audio Processing  
+moviepy==1.0.3
+librosa
+
+# Configuration
+omegaconf
+pandas
+
+# Optional: Gradio (disabled for serverless)
+# gradio
+
+# CLIP and Tokenization
+open-clip-torch
+protobuf
+sentencepiece
+
+# Quantization
+optimum-quanto
+
+# =============================================================================
+# Additional Production Dependencies
+# =============================================================================
+
+# HTTP client for potential callbacks
+httpx>=0.25.0
+
+# Logging
+structlog>=24.0.0
+
+# File handling
+python-magic>=0.4.27
+
+# UUID generation
+uuid6>=2024.7.10

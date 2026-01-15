@@ -1,0 +1,44 @@
+# =============================================================================
+# Ovi 1.1 Inference Configuration
+# =============================================================================
+# Default settings for RunPod Serverless deployment
+# Can be overridden via environment variables or request parameters
+# =============================================================================
+
+# Model Configuration
+model_name: "960x960_10s"  # ["720x720_5s", "960x960_5s", "960x960_10s"]
+ckpt_dir: "/models"
+output_dir: "/tmp/ovi_outputs"
+
+# Generation Mode
+mode: "i2v"  # ["t2v", "i2v", "t2i2v"]
+
+# Sampling Configuration
+sample_steps: 50
+solver_name: "unipc"
+shift: 5.0
+seed: null  # null = random seed
+
+# Guidance Scales
+video_guidance_scale: 4.0
+audio_guidance_scale: 3.0
+slg_layer: 11
+
+# Negative Prompts
+video_negative_prompt: "jitter, bad hands, blur, distortion"
+audio_negative_prompt: "robotic, muffled, echo, distorted"
+
+# Frame Dimensions (for t2v/t2i2v modes)
+# Recommended: [704, 1280], [1280, 704], [960, 960], [720, 720]
+video_frame_height_width: [960, 960]
+
+# Parallelism (single GPU for serverless)
+sp_size: 1
+
+# Memory Optimization
+cpu_offload: false  # Set to true for 24-32GB GPUs
+fp8: false          # FP8 quantization (720x720_5s only)
+qint8: false        # INT8 quantization
+
+# Per-prompt repetition (usually 1 for API)
+each_example_n_times: 1

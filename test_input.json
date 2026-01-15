@@ -1,0 +1,15 @@
+{
+  "input": {
+    "prompt": "A majestic lion walking through the savanna at sunset. Audio: ambient nature sounds with birds chirping and wind rustling through grass",
+    "mode": "t2v",
+    "model": "960x960_10s",
+    "height": 960,
+    "width": 960,
+    "seed": 42,
+    "sample_steps": 50,
+    "video_guidance_scale": 4.0,
+    "audio_guidance_scale": 3.0,
+    "video_negative_prompt": "jitter, bad hands, blur, distortion",
+    "audio_negative_prompt": "robotic, muffled, echo, distorted"
+  }
+}

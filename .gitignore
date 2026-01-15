@@ -1,0 +1,37 @@
+# Ovi RunPod Serverless Service
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Testing
+.pytest_cache/
+.coverage
+
+# Local outputs
+outputs/
+*.mp4
+*.mp3
+*.wav
+
+# Secrets
+.env.local
+secrets/
