@@ -191,6 +191,17 @@ Content-Type: application/json
 }
 ```
 
+**Request 2:**
+```json
+{
+  "input": {
+    "prompt": "A young man wearing a light blue hoodie, dark pants, and a white baseball cap is performing a dynamic street dance on a stone terrace. In the background, there's a stunning panoramic view of a city sprawling along a large body of water, with a long bridge and a distant statue visible under a bright, sunny sky. He begins on one knee, leaning back with one hand raised, then fluidly rises, bringing his hands to his head before dropping them down. He executes a quick succession of intricate footwork, shifting his weight rapidly and performing small hops and shuffles. His movements are sharp and precise, with a strong rhythmic quality. He bends his knees and extends his arms, then continues with more fast-paced footwork, incorporating body isolations and flowing arm movements. The dance is energetic and expressive, with the dancer's shadow stretching out behind him on the sunlit pavement. <S>Ovi diez segundos, mira cómo baila este algoritmo.<E> Audio: Upbeat, electronic dance music with a strong beat and synthesised elements, a processed, slightly robotic-sounding male voice speaking a Spanish phrase.",
+    "mode": "t2v",
+    "model": "960x960_10s"
+  }
+}
+```
+
 **Response:**
 ```json
 {
