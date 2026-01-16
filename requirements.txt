@@ -38,6 +38,7 @@ easydict
 ftfy
 dashscope
 imageio-ffmpeg
+einops
 
 # Numerical
 numpy>=1.23.5,<2

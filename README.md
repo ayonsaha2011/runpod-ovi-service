@@ -10,53 +10,157 @@ Production-ready video+audio generation service using Character AI's Ovi 1.1 mod
 - **OpenAI-Compatible API**: Familiar request/response format
 - **Cloudflare R2 Storage**: Videos uploaded and URLs returned
 - **24GB GPU Support**: FP8/INT8 quantization options
+- **Lightweight Image**: ~5GB image, models downloaded to network volume on first run
 
 ---
 
-## Quick Start
+## RunPod Serverless Deployment Guide
 
-### 1. Build Docker Image
-
-```bash
-# Standard build
-docker build -t your-registry/ovi-runpod:latest .
-
-# With HuggingFace token (if you need gated models)
-# First set the token in your environment:
-export HF_TOKEN=your_huggingface_token
-docker build --build-arg HF_TOKEN=$HF_TOKEN -t your-registry/ovi-runpod:latest .
-
-# Alternative: pass token directly (less secure, visible in shell history)
-docker build --build-arg HF_TOKEN=hf_xxxxx -t your-registry/ovi-runpod:latest .
-```
-
-### 2. Push to Registry
+### Step 1: Build and Push Docker Image
 
 ```bash
-docker push your-registry/ovi-runpod:latest
+# Clone the repository
+git clone https://github.com/your-org/runpod-ovi-service.git
+cd runpod-ovi-service
+
+# Build the Docker image (~5GB, takes 5-10 minutes)
+docker build -t your-dockerhub-username/ovi-runpod:latest .
+
+# Login to Docker Hub (or your registry)
+docker login
+
+# Push to registry
+docker push your-dockerhub-username/ovi-runpod:latest
 ```
 
-### 3. Deploy on RunPod
+> **Note**: The image is lightweight (~5GB). Models download automatically to Network Volume on first run.
 
-1. Go to [RunPod Console](https://console.runpod.io)
-2. Create new Serverless Endpoint
-3. Enter your Docker image URL
-4. Configure GPU: **A100 40GB/80GB** or **H100** recommended
-5. Set environment variables (see below)
-6. Deploy
+---
 
-### 4. Required Environment Variables
+### Step 2: Create Cloudflare R2 Bucket
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `R2_ACCOUNT_ID` | Cloudflare account ID | ✅ |
-| `R2_ACCESS_KEY_ID` | R2 access key | ✅ |
-| `R2_SECRET_ACCESS_KEY` | R2 secret key | ✅ |
-| `R2_BUCKET_NAME` | R2 bucket name | ✅ |
-| `R2_PUBLIC_URL` | Custom domain URL (optional) | ❌ |
-| `OVI_MODEL_NAME` | Default model (960x960_10s) | ❌ |
-| `OVI_CPU_OFFLOAD` | CPU offload for memory (false) | ❌ |
-| `PRELOAD_MODEL` | Pre-load model at startup (false) | ❌ |
+1. Login to [Cloudflare Dashboard](https://dash.cloudflare.com)
+2. Go to **R2 Object Storage** → **Create bucket**
+3. Name your bucket (e.g., `ovi-videos`)
+4. Go to **R2 Overview** → **Manage R2 API Tokens** → **Create API token**
+5. Select permissions: **Object Read & Write**
+6. Copy and save:
+   - **Account ID** (shown in URL or sidebar)
+   - **Access Key ID**
+   - **Secret Access Key**
+7. (Optional) Set up custom domain for public access under bucket settings
+
+---
+
+### Step 3: Create RunPod Network Volume
+
+1. Login to [RunPod Console](https://console.runpod.io)
+2. Go to **Storage** → **Network Volumes**
+3. Click **+ New Network Volume**
+4. Configure:
+   - **Name**: `ovi-models` (or any name)
+   - **Region**: Choose same region as your endpoint (e.g., `EU-RO-1`)
+   - **Size**: `50 GB` (minimum, 100GB recommended for all variants + future models)
+5. Click **Create**
+6. Note the **Volume ID** for the next step
+
+---
+
+### Step 4: Create Serverless Endpoint
+
+1. Go to **Serverless** → **+ New Endpoint**
+2. Configure the endpoint:
+
+   **Basic Settings:**
+   | Setting | Value |
+   |---------|-------|
+   | Endpoint Name | `ovi-video-generator` |
+   | Docker Image | `your-dockerhub-username/ovi-runpod:latest` |
+   | GPU Type | `48GB` or `80GB` (A100 recommended) |
+
+   **Worker Configuration:**
+   | Setting | Recommended Value |
+   |---------|-------------------|
+   | Active Workers | `0` (scale to zero when idle) |
+   | Max Workers | `1-3` (based on your usage) |
+   | GPU per Worker | `1` |
+   | Idle Timeout | `60` seconds |
+   | Execution Timeout | `600` seconds (10 min for long videos) |
+
+3. Click **Advanced** to expand advanced options
+
+4. **Attach Network Volume:**
+   - Select your `ovi-models` volume (created in Step 3)
+   - RunPod automatically mounts it at `/runpod-volume`
+
+5. **Environment Variables** (click **+ Add Environment Variable** for each):
+
+   | Key | Value |
+   |-----|-------|
+   | `R2_ACCOUNT_ID` | Your Cloudflare Account ID |
+   | `R2_ACCESS_KEY_ID` | Your R2 Access Key |
+   | `R2_SECRET_ACCESS_KEY` | Your R2 Secret Key |
+   | `R2_BUCKET_NAME` | `ovi-videos` (your bucket name) |
+   | `R2_PUBLIC_URL` | `https://your-custom-domain.com` (optional) |
+   | `OVI_MODEL_NAME` | `960x960_10s` (default model) |
+   | `OVI_CKPT_DIR` | `/runpod-volume/models` |
+   | `PRELOAD_MODEL` | `false` |
+
+6. Click **Create Endpoint**
+
+---
+
+### Step 5: Test Your Endpoint
+
+1. Copy your **Endpoint ID** from the endpoint details page
+2. Get your **RunPod API Key** from [Settings → API Keys](https://www.runpod.io/console/user/settings)
+3. Send a test request:
+
+```bash
+curl -X POST "https://api.runpod.ai/v2/YOUR_ENDPOINT_ID/runsync" \
+  -H "Authorization: Bearer YOUR_RUNPOD_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": {
+      "prompt": "A cat playing piano. Audio: upbeat jazz piano music",
+      "mode": "t2v",
+      "model": "960x960_10s"
+    }
+  }'
+```
+
+> **First Request**: Will take 3-5 minutes (downloads models + generates video). Subsequent requests: ~45-90 seconds.
+
+---
+
+### Step 6: Monitor and Scale
+
+**View Logs:**
+- Go to your endpoint → **Logs** tab
+- Monitor model downloads on first run
+- Check for any errors
+
+**Scale Workers:**
+- Increase **Max Workers** for higher throughput
+- Each worker needs its own GPU
+- Network volume is shared across workers
+
+**Cost Optimization:**
+- Set **Active Workers** to `0` to scale to zero when idle
+- Use `720x720_5s` model for cheaper 32GB GPUs
+- Enable `OVI_CPU_OFFLOAD=true` for 24GB GPUs
+
+---
+
+## First Run Behavior
+
+On the **first cold start** with a new network volume:
+1. Handler checks if models exist in `/runpod-volume/models`
+2. If not, downloads ~30GB of model weights from HuggingFace
+3. Download takes ~2-3 minutes (one-time only)
+4. Models are cached on network volume for all future cold starts
+
+Subsequent cold starts skip the download and load models directly.
 
 ---
 
@@ -160,16 +264,6 @@ A majestic waterfall. <AUDCAP>rushing water sounds</ENDAUDCAP>
 
 ---
 
-## Local Testing
-
-```bash
-# Test handler locally
-cd runpod-ovi-service
-python src/handler.py --test_input test_input.json
-```
-
----
-
 ## Project Structure
 
 ```
@@ -177,16 +271,28 @@ runpod-ovi-service/
 ├── Dockerfile
 ├── requirements.txt
 ├── README.md
-├── test_input.json
 ├── configs/
 │   └── inference_config.yaml
 ├── scripts/
-│   └── download_models.py
+│   └── download_models.py       # Manual model download script
 └── src/
-    ├── handler.py           # RunPod handler
-    ├── api_models.py        # Pydantic models
-    ├── ovi_engine_wrapper.py # Ovi engine wrapper
-    └── r2_storage.py        # R2 upload handler
+    ├── handler.py               # RunPod handler
+    ├── download_on_startup.py   # Runtime model download
+    ├── api_models.py            # Pydantic models
+    ├── ovi_engine_wrapper.py    # Ovi engine wrapper
+    └── r2_storage.py            # R2 upload handler
+```
+
+---
+
+## Local Development
+
+```bash
+# Manual model download (for local testing)
+python scripts/download_models.py --output-dir ./models --models 960x960_10s
+
+# Test handler locally
+OVI_CKPT_DIR=./models python src/handler.py --test_input test_input.json
 ```
 
 ---
