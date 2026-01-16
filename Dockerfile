@@ -50,12 +50,15 @@ COPY requirements.txt .
 # Install PyTorch with CUDA 12.8 for Blackwell (sm_120) support
 RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
+# Install Flash Attention 2 from prebuilt wheel (required by Ovi)
+# Using prebuilt wheel instead of building from source (50+ min -> ~1 min)
+RUN pip install flash-attn --no-build-isolation || \
+    pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.4.post1/flash_attn-2.7.4.post1+cu12torch2.7cxx11abiFALSE-cp311-cp311-linux_x86_64.whl || \
+    echo "Flash Attention installation failed, will try to build from source" && \
+    pip install flash-attn --no-build-isolation
+
 # Install other dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Note: Skipping Flash Attention build (takes 50+ minutes)
-# PyTorch 2.7+ has native efficient attention (SDPA) that works well
-# If Flash Attention is required, the Ovi code will fall back to SDPA automatically
 
 # -----------------------------------------------------------------------------
 # Stage 3: Production image (NO MODEL DOWNLOAD - uses network volume)
