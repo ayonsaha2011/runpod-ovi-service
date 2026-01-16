@@ -2,7 +2,7 @@
 # Ovi 1.1 RunPod Serverless - Production Dockerfile (OPTIMIZED)
 # =============================================================================
 # Lightweight image - models downloaded at runtime to network volume
-# Target: RunPod Serverless with A100/H100 GPUs
+# Target: RunPod Serverless with A100/H100/Blackwell GPUs
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -38,21 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python3 -m pip install --upgrade pip setuptools wheel
 
 # -----------------------------------------------------------------------------
-# Stage 2: Build Flash Attention
-# -----------------------------------------------------------------------------
-FROM base AS flash-attn-builder
-
-# Install build dependencies - use PyTorch 2.7+ for Blackwell (sm_120) support
-RUN pip install torch --index-url https://download.pytorch.org/whl/cu128
-
-# Build Flash Attention 2 from source (include sm_120 for Blackwell)
-ENV TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;12.0"
-ENV MAX_JOBS=4
-
-RUN pip install flash-attn --no-build-isolation
-
-# -----------------------------------------------------------------------------
-# Stage 3: Install Python dependencies
+# Stage 2: Install Python dependencies
 # -----------------------------------------------------------------------------
 FROM base AS python-deps
 
@@ -67,11 +53,12 @@ RUN pip install torch torchvision torchaudio --index-url https://download.pytorc
 # Install other dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Flash Attention from builder stage
-COPY --from=flash-attn-builder /usr/local/lib/python3.11/dist-packages/flash_attn* /usr/local/lib/python3.11/dist-packages/
+# Note: Skipping Flash Attention build (takes 50+ minutes)
+# PyTorch 2.7+ has native efficient attention (SDPA) that works well
+# If Flash Attention is required, the Ovi code will fall back to SDPA automatically
 
 # -----------------------------------------------------------------------------
-# Stage 4: Production image (NO MODEL DOWNLOAD - uses network volume)
+# Stage 3: Production image (NO MODEL DOWNLOAD - uses network volume)
 # -----------------------------------------------------------------------------
 FROM python-deps AS production
 
