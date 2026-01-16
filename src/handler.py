@@ -4,6 +4,23 @@ OpenAI-compatible API with Cloudflare R2 storage
 """
 import os
 import sys
+
+# =============================================================================
+# CRITICAL: Initialize CUDA BEFORE any other imports that trigger Ovi modules
+# The Ovi T5 module uses torch.cuda.current_device() as a default argument,
+# which is evaluated at class definition (import) time, not at instantiation.
+# =============================================================================
+import torch
+
+# Force CUDA initialization before importing any Ovi modules
+if torch.cuda.is_available():
+    # Initialize CUDA context
+    torch.cuda.init()
+    _ = torch.cuda.current_device()
+    print(f"CUDA initialized: {torch.cuda.get_device_name(0)}", file=sys.stdout, flush=True)
+else:
+    print("WARNING: CUDA not available, running on CPU", file=sys.stdout, flush=True)
+
 import logging
 import time
 import uuid
@@ -12,7 +29,6 @@ import tempfile
 from typing import Optional, Dict, Any
 
 import runpod
-import torch
 
 # Setup logging
 logging.basicConfig(
