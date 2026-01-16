@@ -2,11 +2,8 @@
 # Ovi 1.1 RunPod Serverless - Python Dependencies
 # =============================================================================
 
-# PyTorch (pinned versions - installed separately in Dockerfile with CUDA)
-# These are pinned here to prevent pip from upgrading during dependency resolution
-# torch==2.5.1
-# torchvision==0.20.1
-# torchaudio==2.5.1
+# PyTorch (installed separately in Dockerfile with CUDA 12.8 for Blackwell support)
+# Using latest PyTorch 2.7+ with cu128 for sm_120 GPU architecture
 
 # RunPod SDK
 runpod>=1.7.6

@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Base image with CUDA and Python
 # -----------------------------------------------------------------------------
-FROM nvidia/cuda:12.1.0-devel-ubuntu22.04 AS base
+FROM nvidia/cuda:12.8.0-devel-ubuntu22.04 AS base
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -42,14 +42,14 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 # -----------------------------------------------------------------------------
 FROM base AS flash-attn-builder
 
-# Install build dependencies
-RUN pip install torch==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+# Install build dependencies - use PyTorch 2.7+ for Blackwell (sm_120) support
+RUN pip install torch --index-url https://download.pytorch.org/whl/cu128
 
-# Build Flash Attention 2 from source
-ENV TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0"
+# Build Flash Attention 2 from source (include sm_120 for Blackwell)
+ENV TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;12.0"
 ENV MAX_JOBS=4
 
-RUN pip install flash-attn==2.7.4.post1 --no-build-isolation
+RUN pip install flash-attn --no-build-isolation
 
 # -----------------------------------------------------------------------------
 # Stage 3: Install Python dependencies
@@ -61,14 +61,11 @@ WORKDIR /app
 # Copy requirements first for caching
 COPY requirements.txt .
 
-# Install PyTorch with CUDA 12.1 - pin all versions to prevent conflicts
-RUN pip install torch==2.5.1 torchvision==0.20.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu121
+# Install PyTorch with CUDA 12.8 for Blackwell (sm_120) support
+RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 
-# Install other dependencies (with constraint to prevent torch upgrade)
-RUN echo "torch==2.5.1" > /tmp/constraints.txt && \
-    echo "torchvision==0.20.1" >> /tmp/constraints.txt && \
-    echo "torchaudio==2.5.1" >> /tmp/constraints.txt && \
-    pip install --no-cache-dir -c /tmp/constraints.txt -r requirements.txt
+# Install other dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy Flash Attention from builder stage
 COPY --from=flash-attn-builder /usr/local/lib/python3.11/dist-packages/flash_attn* /usr/local/lib/python3.11/dist-packages/
@@ -82,9 +79,7 @@ LABEL maintainer="AI Platform"
 LABEL version="1.1.0"
 LABEL description="Ovi 1.1 Video Generation - RunPod Serverless (Lightweight)"
 
-WORKDIR /app
-
-# Clone Ovi repository directly in production stage
+# Clone Ovi repository
 RUN git clone --depth 1 https://github.com/character-ai/Ovi.git /app/Ovi
 
 # Copy service code and scripts
@@ -92,7 +87,10 @@ COPY src/ /app/src/
 COPY configs/ /app/configs/
 COPY scripts/ /app/scripts/
 
-# Set Python path to include Ovi
+# Set working directory to Ovi root (required for relative config paths in Ovi code)
+WORKDIR /app/Ovi
+
+# Set Python path to include Ovi and src
 ENV PYTHONPATH="/app/src:/app/Ovi:${PYTHONPATH}"
 ENV OVI_PATH="/app/Ovi"
 
