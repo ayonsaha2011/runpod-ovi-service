@@ -19,7 +19,7 @@ boto3>=1.34.0
 botocore>=1.34.0
 
 # =============================================================================
-# Ovi Dependencies (from requirements.txt)
+# Core Ovi Dependencies (from Ovi requirements.txt)
 # =============================================================================
 
 # Computer Vision
@@ -38,7 +38,6 @@ easydict
 ftfy
 dashscope
 imageio-ffmpeg
-einops
 
 # Numerical
 numpy>=1.23.5,<2
@@ -47,13 +46,11 @@ scipy
 # Video/Audio Processing  
 moviepy==1.0.3
 librosa
+pydub
 
 # Configuration
 omegaconf
 pandas
-
-# Optional: Gradio (disabled for serverless)
-# gradio
 
 # CLIP and Tokenization
 open-clip-torch
@@ -62,6 +59,22 @@ sentencepiece
 
 # Quantization
 optimum-quanto
+
+# =============================================================================
+# Additional Ovi Dependencies (not in official requirements.txt but imported)
+# =============================================================================
+
+# Tensor operations (used by vae.py, model.py)
+einops
+
+# Image processing
+Pillow
+
+# Flux pipeline (used by ovi_fusion_engine.py for t2i2v mode)
+# Already included via diffusers
+
+# SafeTensors (for loading model weights)
+safetensors
 
 # =============================================================================
 # Additional Production Dependencies
@@ -78,3 +91,6 @@ python-magic>=0.4.27
 
 # UUID generation
 uuid6>=2024.7.10
+
+# HuggingFace Hub (for model downloads at runtime)
+huggingface-hub>=0.20.0
